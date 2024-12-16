@@ -3,48 +3,34 @@
 class Database
 {
     private static $instance = null;
+    protected $pdo;
     private $conn;
 
     public function __construct()
     {
-        // Inisialisasi koneksi
-        $this->conn = $this->setConnect();
+        $this->pdo = $this->setConnect();
     }
 
-    /**
-     * Eksekusi query dengan parameter
-     * 
-     * @param string $query SQL Query
-     * @param array $params Array parameter untuk query
-     * @return PDOStatement
-     */
     public function query($query, $params = array())
     {
-        $stmt = $this->conn->prepare($query);
+        $stmt = $this->pdo->prepare($query);
         $stmt->execute($params);
         return $stmt;
     }
 
     public function prepare($sql)
     {
-        return $this->conn->prepare($sql);
+        return $this->pdo->prepare($sql);
     }
 
     public static function getInstance()
     {
-        // Jika instance belum ada, buat dan simpan
         if (self::$instance === null) {
             self::$instance = new self();
         }
-
         return self::$instance;
     }
 
-    /**
-     * Koneksi ke database menggunakan PDO
-     * 
-     * @return PDO Koneksi database
-     */
     private function setConnect()
     {
         try {
@@ -54,27 +40,21 @@ class Database
             $db = DB_NAME;
             $port = DB_PORT;
 
-            // Opsi koneksi PDO
             $options = array(
-                PDO::ATTR_PERSISTENT => true,   // Menggunakan koneksi persisten
-                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Menangani error dengan exceptions
+                PDO::ATTR_PERSISTENT => true,
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
             );
 
-            // Membuat koneksi ke database
             $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8";
-            $this->conn = new PDO($dsn, $user, $pass, $options);
-            return $this->conn;
+            $this->pdo = new PDO($dsn, $user, $pass, $options);
+            return $this->pdo;
         } catch (PDOException $e) {
-            // Jika terjadi error, tampilkan pesan error dan hentikan eksekusi
             die("Connection failed: " . $e->getMessage());
         }
     }
 
-    /**
-     * Menutup koneksi database
-     */
     public function closeConnection()
     {
-        $this->conn = null;
+        $this->pdo = null;
     }
 }

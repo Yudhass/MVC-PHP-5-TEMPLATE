@@ -1,12 +1,19 @@
 <?php
+require_once dirname(__FILE__) . '/../models/User.php';
 
 class HomeController extends Controller
 {
     public function index()
     {
+        $data = new User();
+        $data = $data->all();
+
         return $this->view(
             'home',
-            array('title' => 'Home')
+            array(
+                'title' => 'Home',
+                'data_user' => $data
+            )
         );
     }
 

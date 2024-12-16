@@ -1,94 +1,96 @@
 <?php
+require_once 'Database.php';
 
 class Model extends Database
 {
-
-    // Database connection instance
-    protected $db;
     protected $table;
-    protected $fillable = [];
+    protected $fields = array();
+    protected $query;
+    protected $bindings = array();
 
-    // Constructor untuk memulai koneksi database
     public function __construct()
     {
-        // Pastikan sudah ada koneksi database
-        $this->db = Database::getInstance();  // Asumsi ada kelas Database untuk mengelola koneksi
+        parent::__construct();
     }
 
-    // Menyimpan data ke dalam tabel
-    public function save($data)
+    // Create
+    public function create(array $data)
     {
-        // Filter data hanya yang ada di $fillable
-        $data = array_intersect_key($data, array_flip($this->fillable));
+        $columns = implode(', ', array_keys($data));
+        $placeholders = ':' . implode(', :', array_keys($data));
+        $sql = "INSERT INTO {$this->table} ({$columns}) VALUES ({$placeholders})";
 
-        // Siapkan query untuk insert
-        $columns = implode(',', array_keys($data));
-        $placeholders = ':' . implode(',:', array_keys($data));
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($data);
 
-        $sql = "INSERT INTO {$this->table} ($columns) VALUES ($placeholders)";
-        $stmt = $this->db->prepare($sql);
-
-        // Bind values ke query
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
-
-        return $stmt->execute();
+        return $this->find($this->pdo->lastInsertId());
     }
 
-    // Mengambil semua data
+    // Read: Get all
     public function all()
     {
         $sql = "SELECT * FROM {$this->table}";
-        $stmt = $this->db->query($sql);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $stmt = $this->pdo->query($sql);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
     }
 
-    // Mengambil data berdasarkan kondisi tertentu
+    // Read: Where clause
+    public function where($column, $value, $operator = '=')
+    {
+        $this->query = $this->query ? $this->query . " AND {$column} {$operator} :{$column}" : "SELECT * FROM {$this->table} WHERE {$column} {$operator} :{$column}";
+        $this->bindings[$column] = $value;
+        return $this;
+    }
+
+    // Execute get
+    public function get()
+    {
+        $stmt = $this->pdo->prepare($this->query);
+        $stmt->execute($this->bindings);
+        return $stmt->fetchAll(PDO::FETCH_OBJ);
+    }
+
+    // Execute first
+    public function first()
+    {
+        $this->query .= " LIMIT 1";
+        $stmt = $this->pdo->prepare($this->query);
+        $stmt->execute($this->bindings);
+        return $stmt->fetch(PDO::FETCH_OBJ);
+    }
+
+    // Update
+    public function update(array $data)
+    {
+        $setClause = '';
+        foreach (array_keys($data) as $key) {
+            $setClause .= "{$key} = :{$key}, ";
+        }
+        $setClause = rtrim($setClause, ', ');
+
+        $sql = "UPDATE {$this->table} SET {$setClause} WHERE " . str_replace('SELECT * FROM ' . $this->table . ' WHERE ', '', $this->query);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array_merge($this->bindings, $data));
+        return $stmt->rowCount();
+    }
+
+    // Delete
+    public function delete()
+    {
+        $sql = "DELETE FROM {$this->table} WHERE " . str_replace('SELECT * FROM ' . $this->table . ' WHERE ', '', $this->query);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($this->bindings);
+        return $stmt->rowCount();
+    }
+
+    // Find by primary key
     public function find($id)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE id = :id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        $stmt->execute();
-        return $stmt->fetch(PDO::FETCH_ASSOC);
-    }
-
-    // Mengupdate data berdasarkan id
-    public function update($id, $data)
-    {
-        $data = array_intersect_key($data, array_flip($this->fillable)); // Filter data
-
-        $set = '';
-        foreach ($data as $column => $value) {
-            $set .= "$column = :$column, ";
-        }
-        $set = rtrim($set, ', ');
-
-        $sql = "UPDATE {$this->table} SET $set WHERE id = :id";
-        $stmt = $this->db->prepare($sql);
-
-        // Bind values
-        foreach ($data as $key => $value) {
-            $stmt->bindValue(":$key", $value);
-        }
-        $stmt->bindValue(':id', $id);
-
-        return $stmt->execute();
-    }
-
-    // Menghapus data berdasarkan id
-    public function delete($id)
-    {
-        $sql = "DELETE FROM {$this->table} WHERE id = :id";
-        $stmt = $this->db->prepare($sql);
-        $stmt->bindValue(':id', $id);
-        return $stmt->execute();
-    }
-
-    // Getter untuk nama tabel
-    public function getTable()
-    {
-        return $this->table;
+        $sql = "SELECT * FROM {$this->table} WHERE id = :id LIMIT 1";
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute(array('id' => $id));
+        return $stmt->fetch(PDO::FETCH_OBJ);
     }
 }

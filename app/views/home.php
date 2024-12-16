@@ -25,11 +25,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (!empty($data)) : ?>
-                        <?php foreach ($data as $row) : ?>
+                    <?php if (!empty($data_user)) : ?>
+                        <?php foreach ($data_user as $row) : ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['id']); ?></td>
-                                <td><?= htmlspecialchars($row['name']); ?></td>
+                                <td><?= htmlspecialchars($row->id); ?></td>
+                                <td><?= htmlspecialchars($row->nama); ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else : ?>
