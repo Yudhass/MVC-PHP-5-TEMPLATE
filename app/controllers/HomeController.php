@@ -3,10 +3,11 @@ require_once dirname(__FILE__) . '/../models/User.php';
 
 class HomeController extends Controller
 {
+
     public function index()
     {
-        $data = new User();
-        $data = $data->all();
+        $User = new User();
+        $data = $User->all();
 
         return $this->view(
             'home',
@@ -17,8 +18,19 @@ class HomeController extends Controller
         );
     }
 
-    public function about()
+    public function add_data()
     {
-        echo "This is the About Page.";
+        $User = new User();
+
+        $nama = isset($_POST['nama']) ? $_POST['nama'] : null;
+        $data = $User->create(array(
+            'nama' => $nama
+        ));
+        
+        if(!$data){
+            $this->redirectBack('Failed to add data. Please try again.', 'error');
+        }else{
+            $this->redirectBack('Success to add data');
+        }
     }
 }

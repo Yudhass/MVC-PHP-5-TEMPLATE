@@ -21,3 +21,15 @@ function base_url($path = '')
 {
     return BASEURL . $path;
 }
+
+// Fungsi helper untuk flash message
+function getAlertMessage()
+{
+    echo $_SESSION['flash_message'];
+}
+
+function delete_alert()
+{
+    unset($_SESSION['flash_message']);
+    unset($_SESSION['flash_message_type']);
+}
