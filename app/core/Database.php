@@ -18,7 +18,7 @@ class Database
      * @param array $params Array parameter untuk query
      * @return PDOStatement
      */
-    public function query($query, $params = [])
+    public function query($query, $params = array())
     {
         $stmt = $this->conn->prepare($query);
         $stmt->execute($params);
@@ -55,10 +55,10 @@ class Database
             $port = DB_PORT;
 
             // Opsi koneksi PDO
-            $options = [
+            $options = array(
                 PDO::ATTR_PERSISTENT => true,   // Menggunakan koneksi persisten
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, // Menangani error dengan exceptions
-            ];
+            );
 
             // Membuat koneksi ke database
             $dsn = "mysql:host=$host;port=$port;dbname=$db;charset=utf8";

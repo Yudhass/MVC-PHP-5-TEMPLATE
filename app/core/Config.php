@@ -12,7 +12,7 @@ define('DB_PASS','');
 define('DB_NAME','phpmvc');
 define('DB_PORT','3306');
 
-define('FOLDER_PROJECT', 'template');
+define('FOLDER_PROJECT', 'MVC-PHP-5-TEMPLATE');
 
 // Fungsi helper untuk URL
 function base_url($path = '') {

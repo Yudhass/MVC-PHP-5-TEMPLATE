@@ -28,7 +28,8 @@ class App
             list($controllerName, $methodName) = explode('@', $route['handler']);
             $params = $route['params'];
 
-            $controllerFile = __DIR__ . "/../controllers/$controllerName.php";
+            // $controllerFile = dirname(__FILE__) . '/../routes/routes.php';
+            $controllerFile = dirname(__FILE__) . '/../controllers/' . $controllerName . '.php';
 
             // Cek apakah file controller ada
             if (file_exists($controllerFile)) {
@@ -41,7 +42,7 @@ class App
                     // Cek apakah metode dalam controller ada
                     if (method_exists($controller, $methodName)) {
                         // Panggil metode controller dengan parameter
-                        call_user_func_array([$controller, $methodName], $params);
+                        call_user_func_array(array($controller, $methodName), $params);
                         return;
                     } else {
                         echo "Method not found: $methodName in controller $controllerName.";

@@ -2,12 +2,13 @@
 
 class Router
 {
-    private $routes = [];
+    private $routes = array();
 
     public function __construct()
     {
         // Muat semua rute dari file konfigurasi
-        $this->routes = require_once __DIR__ . '/../routes/routes.php';
+        // $this->routes = require_once __DIR__ . '/../routes/routes.php';
+        $this->routes = require_once dirname(__FILE__) . '/../routes/routes.php';
     }
 
     public function resolve($method, $uri)
@@ -24,10 +25,10 @@ class Router
             $pattern = $this->convertToRegex($routePath);
             if (preg_match($pattern, $uri, $matches)) {
                 array_shift($matches); // Hapus elemen pertama (full match)
-                return [
+                return array(
                     'handler' => $handler,
                     'params' => $matches,
-                ];
+                );
             }
         }
 
