@@ -1,47 +1,50 @@
 <?php
 
 require_once 'Router.php';
+
 class App
 {
-
     private $router;
 
     public function __construct()
     {
+        // Inisialisasi router
         $this->router = new Router();
-
-        // Muat rute dari file routes.php
-        $routes = require __DIR__ . '/../routes/routes.php';
-        foreach ($routes as $path => $handler) {
-            $this->router->register($path, $handler);
-        }
     }
 
     public function run()
     {
+        // Ambil metode HTTP (GET, POST, PUT, DELETE, dll.)
+        $method = $_SERVER['REQUEST_METHOD'];
+
+        // Ambil URI permintaan dan hilangkan base folder
         $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        $requestUri = str_replace('/' . FOLDER_PROJECT, '', $requestUri);
 
-        // Hilangkan '/template/' dari URL jika aplikasi berjalan dalam subfolder
-        $requestUri = str_replace('/template', '', $requestUri);
-
-        $route = $this->router->resolve($requestUri);
+        // Proses permintaan melalui router
+        $route = $this->router->resolve($method, $requestUri);
 
         if ($route) {
-            list($controllerName, $method) = explode('@', $route['handler']);
+            list($controllerName, $methodName) = explode('@', $route['handler']);
             $params = $route['params'];
 
             $controllerFile = __DIR__ . "/../controllers/$controllerName.php";
 
+            // Cek apakah file controller ada
             if (file_exists($controllerFile)) {
                 require_once $controllerFile;
 
+                // Cek apakah kelas controller ada
                 if (class_exists($controllerName)) {
                     $controller = new $controllerName();
-                    if (method_exists($controller, $method)) {
-                        call_user_func_array([$controller, $method], $params);
+
+                    // Cek apakah metode dalam controller ada
+                    if (method_exists($controller, $methodName)) {
+                        // Panggil metode controller dengan parameter
+                        call_user_func_array([$controller, $methodName], $params);
                         return;
                     } else {
-                        echo "Method not found: $method in controller $controllerName.";
+                        echo "Method not found: $methodName in controller $controllerName.";
                         return;
                     }
                 } else {
@@ -49,13 +52,13 @@ class App
                     return;
                 }
             } else {
-                echo "Controller file not found: $controllerFile";
+                echo "Controller file not found: $controllerFile.";
                 return;
             }
         }
 
         // Jika rute tidak ditemukan
         http_response_code(404);
-        echo "Route not found.";
+        echo "Route not found for $method $requestUri.";
     }
 }

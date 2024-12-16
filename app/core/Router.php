@@ -1,26 +1,42 @@
-<?php 
+<?php
 
-class Router{
-    private $routes = array();
+class Router
+{
+    private $routes = [];
 
-    public function register($path, $handler){
-        $this->routes[$path] = $handler;
+    public function __construct()
+    {
+        // Muat semua rute dari file konfigurasi
+        $this->routes = require_once __DIR__ . '/../routes/routes.php';
     }
 
-    public function resolve($requestUri) {
-        foreach ($this->routes as $path => $handler) {
-            // Ganti parameter dinamis {id} menjadi regex
-            $pattern = preg_replace('/\{[a-zA-Z_]+\}/', '(\d+)', $path);
-            if (preg_match("#^$pattern$#", $requestUri, $matches)) {
-                array_shift($matches); // Remove full match
-                return ['handler' => $handler, 'params' => $matches];
+    public function resolve($method, $uri)
+    {
+        foreach ($this->routes as $route) {
+            list($routeMethod, $routePath, $handler) = $route;
+
+            // Cek metode HTTP
+            if ($method !== $routeMethod) {
+                continue;
+            }
+
+            // Cek URL dengan parameter dinamis
+            $pattern = $this->convertToRegex($routePath);
+            if (preg_match($pattern, $uri, $matches)) {
+                array_shift($matches); // Hapus elemen pertama (full match)
+                return [
+                    'handler' => $handler,
+                    'params' => $matches,
+                ];
             }
         }
-        return null;
+
+        return null; // Tidak ditemukan
     }
 
-    public function getRoutes() {
-        return $this->routes;
+    private function convertToRegex($path)
+    {
+        // Ubah {param} menjadi regex
+        return '/^' . preg_replace('/\{([a-zA-Z0-9_]+)\}/', '([a-zA-Z0-9_]+)', str_replace('/', '\/', $path)) . '$/';
     }
 }
-?>

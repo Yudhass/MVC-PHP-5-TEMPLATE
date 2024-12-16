@@ -1,10 +1,10 @@
 <?php
 
-class HomeController
+class HomeController extends Controller
 {
     public function index()
     {
-        require_once __DIR__ . '/../views/home.php';
+        return $this->view('home',['title' => 'Home']);
     }
 
     public function about()
