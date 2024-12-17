@@ -7,7 +7,6 @@ class Router
     public function __construct()
     {
         // Muat semua rute dari file konfigurasi
-        // $this->routes = require_once __DIR__ . '/../routes/routes.php';
         $this->routes = require_once dirname(__FILE__) . '/../routes/routes.php';
     }
 
