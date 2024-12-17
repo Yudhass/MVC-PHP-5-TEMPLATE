@@ -68,20 +68,35 @@ class Model extends Database
         }
         $setClause = rtrim($setClause, ', ');
 
-        $sql = "UPDATE {$this->table} SET {$setClause} WHERE " . str_replace('SELECT * FROM ' . $this->table . ' WHERE ', '', $this->query);
+        // Asumsikan 'id' sebagai primary key
+        $sql = "UPDATE {$this->table} SET {$setClause} WHERE id = :id";
+
+        // Pastikan 'id' selalu ada di array $data
+        if (!isset($data['id'])) {
+            throw new Exception("ID is required for updating records.");
+        }
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute(array_merge($this->bindings, $data));
+        $stmt->execute($data);
+
         return $stmt->rowCount();
     }
 
     // Delete
-    public function delete()
+    public function delete($id)
     {
-        $sql = "DELETE FROM {$this->table} WHERE " . str_replace('SELECT * FROM ' . $this->table . ' WHERE ', '', $this->query);
+        // Membuat query DELETE yang menggunakan ID untuk penghapusan
+        $sql = "DELETE FROM {$this->table} WHERE id = :id";
 
+        // Menyiapkan statement SQL
         $stmt = $this->pdo->prepare($sql);
-        $stmt->execute($this->bindings);
+
+        // Menjalankan query dengan binding ID
+        $stmt->execute(array(
+            ':id' => $id
+        ));
+
+        // Mengembalikan jumlah baris yang terpengaruh (berapa banyak data yang dihapus)
         return $stmt->rowCount();
     }
 
