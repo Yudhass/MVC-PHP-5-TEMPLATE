@@ -19,7 +19,17 @@ class App
 
         // Ambil URI permintaan dan hilangkan base folder
         $requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
-        $requestUri = str_replace('/' . FOLDER_PROJECT, '', $requestUri);
+        
+        // Normalize FOLDER_PROJECT - hapus trailing slash jika ada
+        $folderProject = rtrim(FOLDER_PROJECT, '/');
+        
+        // Hilangkan base folder dari URI
+        $requestUri = str_replace('/' . $folderProject, '', $requestUri);
+        
+        // Jika URI kosong atau hanya slash, set sebagai '/'
+        if (empty($requestUri)) {
+            $requestUri = '/';
+        }
 
         // Proses permintaan melalui router
         $route = $this->router->resolve($method, $requestUri);
