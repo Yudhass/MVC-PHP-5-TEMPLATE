@@ -7,7 +7,7 @@ class HomeController extends Controller
     public function index()
     {
         $User = new User();
-        
+
         // Contoh SELECT ALL - Ambil semua data
         $data = $User->selectAll(); // atau $User->all();
 
@@ -39,18 +39,18 @@ class HomeController extends Controller
 
         // Sanitize and validate input
         $nama = isset($_POST['nama']) ? sanitize($_POST['nama'], 'string') : null;
-        
+
         if (empty($nama)) {
             $this->redirectBack('Name is required.', 'error');
             return;
         }
-        
+
         // Validate name length
         if (!validate($nama, 'min', array('min' => 3)) || !validate($nama, 'max', array('max' => 100))) {
             $this->redirectBack('Name must be between 3 and 100 characters.', 'error');
             return;
         }
-        
+
         // Contoh INSERT
         $data = $User->insert(array(
             'nama' => $nama
@@ -80,9 +80,9 @@ class HomeController extends Controller
 
         // Sanitize ID
         $id = sanitize($id, 'int');
-        
+
         $user = new User();
-        
+
         // Contoh SELECT ONE - Cari data berdasarkan ID
         $data = $user->selectOne($id); // atau $user->find($id);
 
@@ -90,33 +90,33 @@ class HomeController extends Controller
             $this->redirectBack('Data tidak ditemukan', 'error');
         } else {
             // Sanitize and validate input
-        // CSRF Protection
-        if (CSRF_ENABLED && !verify_csrf()) {
-            $this->redirectBack('Invalid CSRF token. Please try again.', 'error');
-            return;
-        }
+            // CSRF Protection
+            if (CSRF_ENABLED && !verify_csrf()) {
+                $this->redirectBack('Invalid CSRF token. Please try again.', 'error');
+                return;
+            }
 
-        // Rate Limiting
-        if (RATE_LIMIT_ENABLED && !rate_limit('delete_data', 5, 60)) {
-            $this->redirectBack('Too many attempts. Please try again later.', 'error');
-            return;
-        }
+            // Rate Limiting
+            if (RATE_LIMIT_ENABLED && !rate_limit('delete_data', 5, 60)) {
+                $this->redirectBack('Too many attempts. Please try again later.', 'error');
+                return;
+            }
 
-        // Sanitize ID
-        $id = sanitize($id, 'int');
-        
+            // Sanitize ID
+            $id = sanitize($id, 'int');
+
             $nama = isset($_POST['nama']) ? sanitize($_POST['nama'], 'string') : '';
-            
+
             if (empty($nama)) {
                 $this->redirectBack('Name is required.', 'error');
                 return;
             }
-            
+
             if (!validate($nama, 'min', array('min' => 3)) || !validate($nama, 'max', array('max' => 100))) {
                 $this->redirectBack('Name must be between 3 and 100 characters.', 'error');
                 return;
             }
-            
+
             // Contoh UPDATE BY ID
             $updated = $user->updateById($id, array(
                 'nama' => $nama
@@ -155,10 +155,10 @@ class HomeController extends Controller
     {
         $user = new User();
         $nama = isset($_GET['nama']) ? $_GET['nama'] : '';
-        
+
         // Contoh SELECT WHERE
         $data = $user->selectWhere('nama', '%' . $nama . '%', 'LIKE');
-        
+
         // Atau menggunakan query builder:
         // $data = $user->where('nama', '%' . $nama . '%', 'LIKE')->get();
 
@@ -175,10 +175,10 @@ class HomeController extends Controller
     public function get_user_detail($id)
     {
         $user = new User();
-        
+
         // Cara 1: Menggunakan find
         $data = $user->find($id);
-        
+
         // Cara 2: Menggunakan where dengan first
         // $data = $user->where('id', $id)->first();
 
@@ -195,4 +195,3 @@ class HomeController extends Controller
         }
     }
 }
-

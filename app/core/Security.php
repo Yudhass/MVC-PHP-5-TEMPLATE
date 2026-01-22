@@ -295,12 +295,30 @@ class Security
     public static function hashPassword($password)
     {
         if (function_exists('password_hash')) {
-            // PHP 5.5+
-            return password_hash($password, PASSWORD_DEFAULT);
+            // PHP 5.5+ - Gunakan bcrypt dengan cost factor 12 untuk hash yang lebih kuat
+            // Cost 12 = 4096 iterasi (lebih lambat tapi lebih aman)
+            $options = array(
+                'cost' => 12
+            );
+            return password_hash($password, PASSWORD_BCRYPT, $options);
         } else {
             // PHP 5.2-5.4 fallback
+            // Cek apakah sistem mendukung bcrypt
+            if (CRYPT_BLOWFISH == 1) {
+                // Sistem mendukung bcrypt
+                $salt = self::generateSalt();
+                $hash = crypt($password, '$2a$12$' . $salt);
+                
+                // Validasi hash yang dihasilkan
+                if (strlen($hash) == 60) {
+                    return $hash;
+                }
+            }
+            
+            // Fallback ke SHA-256 dengan salt jika bcrypt tidak tersedia
+            // Ini lebih aman daripada MD5 dan masih kompatibel dengan PHP 5.2
             $salt = self::generateSalt();
-            return crypt($password, '$2a$10$' . $salt);
+            return '$SHA256$' . $salt . '$' . hash('sha256', $salt . $password);
         }
     }
 
@@ -317,25 +335,56 @@ class Security
             // PHP 5.5+
             return password_verify($password, $hash);
         } else {
-            // PHP 5.2-5.4 fallback
-            return crypt($password, $hash) === $hash;
+            // Cek format hash
+            if (substr($hash, 0, 3) === '$2a' || substr($hash, 0, 3) === '$2y') {
+                // Bcrypt hash - PHP 5.2-5.4 fallback
+                return crypt($password, $hash) === $hash;
+            } elseif (substr($hash, 0, 8) === '$SHA256$') {
+                // SHA-256 custom hash
+                $parts = explode('$', $hash);
+                if (count($parts) == 4) {
+                    $salt = $parts[2];
+                    $storedHash = $parts[3];
+                    return hash('sha256', $salt . $password) === $storedHash;
+                }
+            }
+            
+            return false;
         }
     }
 
     /**
-     * Generate salt for password
+     * Generate salt for bcrypt password (22 chars in base64 format)
+     * Bcrypt requires exactly 22 characters from the alphabet: ./A-Za-z0-9
      * 
      * @return string
      */
     private static function generateSalt()
     {
+        // Alphabet untuk bcrypt base64: ./0-9A-Za-z
+        $alphabet = './ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        $salt = '';
+        
         if (function_exists('random_bytes')) {
-            return substr(bin2hex(random_bytes(16)), 0, 22);
+            // PHP 7+: Gunakan random_bytes untuk security yang lebih baik
+            $randomBytes = random_bytes(16);
+            for ($i = 0; $i < 22; $i++) {
+                $salt .= $alphabet[ord($randomBytes[$i % 16]) % 64];
+            }
         } elseif (function_exists('openssl_random_pseudo_bytes')) {
-            return substr(bin2hex(openssl_random_pseudo_bytes(16)), 0, 22);
+            // PHP 5.3+: Gunakan openssl
+            $randomBytes = openssl_random_pseudo_bytes(16);
+            for ($i = 0; $i < 22; $i++) {
+                $salt .= $alphabet[ord($randomBytes[$i % 16]) % 64];
+            }
         } else {
-            return substr(md5(uniqid(rand(), true)), 0, 22);
+            // PHP 5.2: Fallback dengan kombinasi fungsi random
+            for ($i = 0; $i < 22; $i++) {
+                $salt .= $alphabet[mt_rand(0, 63)];
+            }
         }
+        
+        return $salt;
     }
 
     // ==========================================
