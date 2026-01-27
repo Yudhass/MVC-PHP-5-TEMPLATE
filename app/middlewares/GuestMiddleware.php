@@ -8,7 +8,7 @@ require_once dirname(__FILE__) . '/../core/Middleware.php';
  */
 class GuestMiddleware extends Middleware
 {
-    public function handle($params = array())
+    public function handle()
     {
         // Jika user sudah login, redirect ke home
         if (isset($_SESSION['user']) && !empty($_SESSION['user'])) {

@@ -9,10 +9,9 @@ abstract class Middleware
     /**
      * Handle request
      * 
-     * @param array $params Route parameters
      * @return bool True jika allowed, False jika ditolak
      */
-    abstract public function handle($params = array());
+    abstract public function handle();
     
     /**
      * Redirect to specific route

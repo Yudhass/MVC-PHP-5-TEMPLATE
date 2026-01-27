@@ -8,7 +8,7 @@ require_once dirname(__FILE__) . '/../core/Middleware.php';
  */
 class AuthMiddleware extends Middleware
 {
-    public function handle($params = array())
+    public function handle()
     {
         // Cek apakah user sudah login
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {

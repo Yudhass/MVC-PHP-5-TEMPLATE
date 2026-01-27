@@ -44,8 +44,15 @@
 
         .dd-subtitle {
             font-size: 13px;
-            opacity: 0.9;
+            opacity: 0.95;
             margin-top: 4px;
+        }
+
+        .dd-subtitle strong {
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 2px 8px;
+            border-radius: 4px;
         }
 
         .dd-count {
@@ -173,7 +180,13 @@
         <div class="dd-header-content">
             <div>
                 <div class="dd-title">🐛 Debug Data - Dump & Die</div>
-                <div class="dd-subtitle">Displaying <?php echo count($debugData); ?> variable(s)</div>
+                <div class="dd-subtitle">
+                    📍 Called from: <strong style="color: #ffd700;"><?php echo htmlspecialchars(basename($callerFile)); ?></strong> 
+                    on line <strong style="color: #ffd700;"><?php echo $callerLine; ?></strong>
+                </div>
+                <div class="dd-subtitle" style="margin-top: 5px; font-size: 11px; opacity: 0.7;">
+                    <?php echo htmlspecialchars($callerFile); ?>
+                </div>
             </div>
             <div class="dd-count">
                 <?php echo count($debugData); ?> Variable<?php echo count($debugData) > 1 ? 's' : ''; ?>

@@ -24,13 +24,8 @@ class RoleMiddleware extends Middleware
         }
     }
     
-    public function handle($params = array())
+    public function handle()
     {
-        // Set allowed roles dari parameter jika ada (dari routing)
-        if (!empty($params)) {
-            $this->allowedRoles = $params;
-        }
-        
         // Cek apakah user sudah login
         if (!isset($_SESSION['user']) || empty($_SESSION['user'])) {
             $this->redirect('login', 'Silakan login terlebih dahulu.', 'warning');
