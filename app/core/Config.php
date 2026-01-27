@@ -17,6 +17,34 @@ define('DB_PASS', env('DB_PASS', ''));
 define('DB_NAME', env('DB_NAME', 'crudtest'));
 define('DB_PORT', env('DB_PORT', '3306'));
 
+// Secondary Database Configuration (TEST2)
+define('DB_TEST2_HOST', env('DB_TEST2_HOST', 'localhost'));
+define('DB_TEST2_USER', env('DB_TEST2_USER', 'root'));
+define('DB_TEST2_PASS', env('DB_TEST2_PASS', ''));
+define('DB_TEST2_NAME', env('DB_TEST2_NAME', 'db_TEST2'));
+define('DB_TEST2_PORT', env('DB_TEST2_PORT', '3306'));
+
+// Register Database Connections
+require_once dirname(__FILE__) . '/DatabaseManager.php';
+
+// Register default connection
+DatabaseManager::addConnection('default', array(
+    'host' => DB_HOST,
+    'user' => DB_USER,
+    'pass' => DB_PASS,
+    'name' => DB_NAME,
+    'port' => DB_PORT
+));
+
+// Register TEST2 connection
+DatabaseManager::addConnection('TEST2', array(
+    'host' => DB_TEST2_HOST,
+    'user' => DB_TEST2_USER,
+    'pass' => DB_TEST2_PASS,
+    'name' => DB_TEST2_NAME,
+    'port' => DB_TEST2_PORT
+));
+
 // Application Configuration
 define('APP_NAME', env('APP_NAME', 'MVC-PHP-5-TEMPLATE'));
 define('APP_ENV', env('APP_ENV', 'development'));

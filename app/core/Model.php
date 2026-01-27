@@ -1,5 +1,6 @@
 <?php
 require_once 'Database.php';
+require_once 'DatabaseManager.php';
 
 class Model extends Database
 {
@@ -7,10 +8,50 @@ class Model extends Database
     protected $fields = array();
     protected $query;
     protected $bindings = array();
+    protected $connection = 'default'; // Default connection name
+    protected $db; // DatabaseConnection instance
 
     public function __construct()
     {
-        parent::__construct();
+        // Jika menggunakan connection khusus, ambil dari DatabaseManager
+        if ($this->connection !== 'default') {
+            $this->db = DatabaseManager::connection($this->connection);
+            $this->usePDO = $this->db->isUsingPDO();
+            if ($this->usePDO) {
+                $this->pdo = $this->db->getPDO();
+            } else {
+                $this->conn = $this->db->getConn();
+            }
+        } else {
+            // Gunakan default connection (parent Database)
+            parent::__construct();
+            $this->db = $this;
+        }
+    }
+    
+    /**
+     * Set connection name untuk model
+     * Usage: $model->setConnection('TEST2');
+     */
+    public function setConnection($connectionName)
+    {
+        $this->connection = $connectionName;
+        $this->db = DatabaseManager::connection($connectionName);
+        $this->usePDO = $this->db->isUsingPDO();
+        if ($this->usePDO) {
+            $this->pdo = $this->db->getPDO();
+        } else {
+            $this->conn = $this->db->getConn();
+        }
+        return $this;
+    }
+    
+    /**
+     * Get database connection
+     */
+    protected function getConnection()
+    {
+        return $this->db;
     }
 
     // INSERT - Tambah data baru
@@ -100,12 +141,129 @@ class Model extends Database
     // WHERE clause builder
     public function where($column, $value, $operator = '=')
     {
-        if (empty($this->query)) {
-            $this->query = "SELECT * FROM {$this->table} WHERE {$column} {$operator} :{$column}";
-        } else {
-            $this->query .= " AND {$column} {$operator} :{$column}";
+        // Buat parameter name yang valid (ganti titik, spasi, dan karakter special dengan underscore)
+        $paramName = str_replace(array('.', ' ', '-', '(', ')'), '_', $column);
+        
+        // Jika parameter name sudah ada, tambahkan counter
+        $originalParamName = $paramName;
+        $counter = 1;
+        while (isset($this->bindings[$paramName])) {
+            $paramName = $originalParamName . '_' . $counter;
+            $counter++;
         }
-        $this->bindings[$column] = $value;
+        
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table} WHERE {$column} {$operator} :{$paramName}";
+        } else {
+            $this->query .= " AND {$column} {$operator} :{$paramName}";
+        }
+        $this->bindings[$paramName] = $value;
+        return $this;
+    }
+    
+    /**
+     * WHERE NOT EQUAL clause
+     * Usage: $model->whereNotEqual('id', 0)->get();
+     * atau gunakan: $model->where('id', 0, '!=')->get();
+     * 
+     * @param string $column Column name
+     * @param mixed $value Value to compare
+     * @return Model
+     */
+    public function whereNotEqual($column, $value)
+    {
+        return $this->where($column, $value, '!=');
+    }
+    
+    /**
+     * WHERE NOT IN clause
+     * Usage: $model->whereNotIn('status', array('deleted', 'banned'))->get();
+     * 
+     * @param string $column Column name
+     * @param array $values Array of values
+     * @return Model
+     */
+    public function whereNotIn($column, $values)
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table} WHERE {$column} NOT IN (";
+        } else {
+            $this->query .= " AND {$column} NOT IN (";
+        }
+        
+        // Build placeholders dengan nama yang valid
+        $placeholders = array();
+        $paramBase = str_replace(array('.', ' ', '-', '(', ')'), '_', $column);
+        foreach ($values as $index => $value) {
+            $key = $paramBase . '_' . $index;
+            $placeholders[] = ':' . $key;
+            $this->bindings[$key] = $value;
+        }
+        
+        $this->query .= implode(', ', $placeholders) . ')';
+        return $this;
+    }
+    
+    /**
+     * WHERE IN clause
+     * Usage: $model->whereIn('status', array('active', 'pending'))->get();
+     * 
+     * @param string $column Column name
+     * @param array $values Array of values
+     * @return Model
+     */
+    public function whereIn($column, $values)
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table} WHERE {$column} IN (";
+        } else {
+            $this->query .= " AND {$column} IN (";
+        }
+        
+        // Build placeholders dengan nama yang valid
+        $placeholders = array();
+        $paramBase = str_replace(array('.', ' ', '-', '(', ')'), '_', $column);
+        foreach ($values as $index => $value) {
+            $key = $paramBase . '_' . $index;
+            $placeholders[] = ':' . $key;
+            $this->bindings[$key] = $value;
+        }
+        
+        $this->query .= implode(', ', $placeholders) . ')';
+        return $this;
+    }
+    
+    /**
+     * WHERE NOT NULL clause
+     * Usage: $model->whereNotNull('deleted_at')->get();
+     * 
+     * @param string $column Column name
+     * @return Model
+     */
+    public function whereNotNull($column)
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table} WHERE {$column} IS NOT NULL";
+        } else {
+            $this->query .= " AND {$column} IS NOT NULL";
+        }
+        return $this;
+    }
+    
+    /**
+     * WHERE NULL clause
+     * Usage: $model->whereNull('deleted_at')->get();
+     * 
+     * @param string $column Column name
+     * @return Model
+     */
+    public function whereNull($column)
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table} WHERE {$column} IS NULL";
+        } else {
+            $this->query .= " AND {$column} IS NULL";
+        }
         return $this;
     }
 
@@ -166,8 +324,23 @@ class Model extends Database
     }
 
     // UPDATE - Update data (memerlukan id di dalam array $data)
-    public function update($data)
+    public function update($data, $id = null)
     {
+        // Jika $data bukan array, return false
+        if (!is_array($data)) {
+            return false;
+        }
+
+        // Jika id dikirim sebagai parameter kedua (untuk backward compatibility)
+        if ($id !== null) {
+            $data['id'] = $id;
+        }
+
+        // Pastikan 'id' selalu ada di array $data
+        if (!isset($data['id'])) {
+            return false;
+        }
+
         $setClause = '';
         foreach (array_keys($data) as $key) {
             if ($key !== 'id') {
@@ -177,11 +350,6 @@ class Model extends Database
         $setClause = rtrim($setClause, ', ');
 
         $sql = "UPDATE {$this->table} SET {$setClause} WHERE id = :id";
-
-        // Pastikan 'id' selalu ada di array $data
-        if (!isset($data['id'])) {
-            throw new Exception("ID is required for updating records.");
-        }
 
         if ($this->usePDO) {
             $stmt = $this->pdo->prepare($sql);
@@ -245,6 +413,202 @@ class Model extends Database
             $result = mysql_query($sql, $this->conn);
             return mysql_fetch_object($result);
         }
+    }
+    
+    /**
+     * Raw Query - Execute raw SQL query and return results
+     * 
+     * @param string $sql SQL query
+     * @param array $params Parameter bindings (optional)
+     * @return array Array of objects
+     */
+    public function rawQuery($sql, $params = array())
+    {
+        if ($this->usePDO) {
+            $stmt = $this->pdo->prepare($sql);
+            
+            // Bind parameters if provided
+            if (!empty($params)) {
+                foreach ($params as $key => $value) {
+                    // Check if key is numeric (positional) or string (named)
+                    if (is_numeric($key)) {
+                        $stmt->bindValue($key + 1, $value);
+                    } else {
+                        $stmt->bindValue(':' . ltrim($key, ':'), $value);
+                    }
+                }
+            }
+            
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_OBJ);
+        } else {
+            // Untuk PHP 5.2 - escape manual
+            if (!empty($params)) {
+                foreach ($params as $key => $value) {
+                    $escapedValue = $this->escapeString($value);
+                    if (is_numeric($key)) {
+                        // Positional parameters (?)
+                        $sql = preg_replace('/\?/', "'" . $escapedValue . "'", $sql, 1);
+                    } else {
+                        // Named parameters (:name)
+                        $sql = str_replace(':' . ltrim($key, ':'), "'" . $escapedValue . "'", $sql);
+                    }
+                }
+            }
+            
+            $result = mysql_query($sql, $this->conn);
+            $data = array();
+            
+            if ($result) {
+                while ($row = mysql_fetch_object($result)) {
+                    $data[] = $row;
+                }
+            }
+            
+            return $data;
+        }
+    }
+    
+    /**
+     * Execute raw query and return first result
+     * 
+     * @param string $sql SQL query
+     * @param array $params Parameter bindings
+     * @return object|null Single object or null
+     */
+    public function rawQueryFirst($sql, $params = array())
+    {
+        $results = $this->rawQuery($sql, $params);
+        return !empty($results) ? $results[0] : null;
+    }
+    
+    /**
+     * JOIN - Add JOIN clause to query builder (Laravel style)
+     * 
+     * @param string $table Table to join
+     * @param string $first First column
+     * @param string $operator Operator (=, !=, >, <, dll) atau second column jika 3 parameter
+     * @param string $second Second column (optional)
+     * @param string $type Join type (INNER, LEFT, RIGHT)
+     * @return $this
+     */
+    public function join($table, $first, $operator = '=', $second = null, $type = 'INNER')
+    {
+        // Jika hanya 3 parameter: join('table', 'col1', 'col2')
+        if ($second === null) {
+            $second = $operator;
+            $operator = '=';
+        }
+        
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table}";
+        }
+        
+        $this->query .= " {$type} JOIN {$table} ON {$first} {$operator} {$second}";
+        return $this;
+    }
+    
+    /**
+     * LEFT JOIN
+     */
+    public function leftJoin($table, $first, $operator = '=', $second = null)
+    {
+        if ($second === null) {
+            $second = $operator;
+            $operator = '=';
+        }
+        return $this->join($table, $first, $operator, $second, 'LEFT');
+    }
+    
+    /**
+     * RIGHT JOIN
+     */
+    public function rightJoin($table, $first, $operator = '=', $second = null)
+    {
+        if ($second === null) {
+            $second = $operator;
+            $operator = '=';
+        }
+        return $this->join($table, $first, $operator, $second, 'RIGHT');
+    }
+    
+    /**
+     * SELECT - Specify columns to select
+     * 
+     * @param string $columns Columns to select
+     * @return $this
+     */
+    public function select($columns = '*')
+    {
+        $this->query = "SELECT {$columns} FROM {$this->table}";
+        return $this;
+    }
+    
+    /**
+     * OR WHERE - Add OR WHERE clause
+     * 
+     * @param string $column Column name
+     * @param string $operator Operator
+     * @param mixed $value Value
+     * @return $this
+     */
+    public function orWhere($column, $operator, $value = null)
+    {
+        if ($value === null) {
+            $value = $operator;
+            $operator = '=';
+        }
+        
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table}";
+        }
+        
+        if (stripos($this->query, 'WHERE') === false) {
+            $this->query .= " WHERE {$column} {$operator} '" . $this->escapeString($value) . "'";
+        } else {
+            $this->query .= " OR {$column} {$operator} '" . $this->escapeString($value) . "'";
+        }
+        
+        return $this;
+    }
+    
+    /**
+     * ORDER BY - Add ORDER BY clause
+     * 
+     * @param string $column Column name
+     * @param string $direction ASC atau DESC (default: ASC)
+     * @return $this
+     */
+    public function orderBy($column, $direction = 'ASC')
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table}";
+        }
+        
+        $this->query .= " ORDER BY {$column} {$direction}";
+        return $this;
+    }
+    
+    /**
+     * LIMIT - Add LIMIT clause
+     * 
+     * @param int $limit Limit number
+     * @param int $offset Offset (optional)
+     * @return $this
+     */
+    public function limit($limit, $offset = 0)
+    {
+        if (empty($this->query)) {
+            $this->query = "SELECT * FROM {$this->table}";
+        }
+        
+        if ($offset > 0) {
+            $this->query .= " LIMIT {$offset}, {$limit}";
+        } else {
+            $this->query .= " LIMIT {$limit}";
+        }
+        
+        return $this;
     }
 }
 

@@ -274,14 +274,16 @@ class App
             
             if (file_exists($middlewarePath)) {
                 require_once $middlewarePath;
-                $middlewareInstance = new $middlewareClass();
                 
-                // Execute middleware dengan parameter
+                // Create middleware instance dengan parameter di constructor
                 if (!empty($params)) {
-                    call_user_func_array(array($middlewareInstance, 'handle'), $params);
+                    $middlewareInstance = new $middlewareClass($params);
                 } else {
-                    $middlewareInstance->handle();
+                    $middlewareInstance = new $middlewareClass();
                 }
+                
+                // Execute middleware
+                $middlewareInstance->handle();
             } else {
                 $this->showErrorPage(array(
                     'errorTitle' => 'Middleware Not Found',

@@ -11,13 +11,34 @@ class HomeController extends Controller
         // Contoh SELECT ALL - Ambil semua data
         $data = $User->selectAll(); // atau $User->all();
 
-        return $this->view(
-            'home',
-            array(
-                'title' => 'Home',
-                'data_user' => $data
-            )
-        );
+        // Using new template system with parameters
+        return $this->template('home', array(
+            'title' => 'Home - Dashboard',
+            'layout' => 'layouts/master',
+            'navbar' => true,
+            'footer' => true,
+            'sidebar' => false,
+            'wrapperClass' => 'container',
+            'brandName' => 'MVC Template System',
+            'footerText' => 'MVC PHP 5 Template',
+            'data_user' => $data,
+            'css' => array(
+                // Add custom CSS files here
+                // BASEURL . 'css/custom.css'
+            ),
+            'js' => array(
+                // Add custom JS files here
+                // BASEURL . 'js/custom.js'
+            ),
+            'styles' => '
+                /* Add inline styles here */
+                .custom-header { padding: 20px; }
+            ',
+            'scripts' => '
+                // Add inline scripts here
+                console.log("Home page loaded");
+            '
+        ));
     }
 
     // INSERT - Tambah data baru

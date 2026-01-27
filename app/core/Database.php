@@ -103,6 +103,26 @@ class Database
         }
     }
 
+    public function getMySQLVersion()
+    {
+        try {
+            if ($this->usePDO) {
+                $stmt = $this->pdo->query("SELECT VERSION() as version");
+                $row = $stmt->fetch(PDO::FETCH_ASSOC);
+                return $row ? $row['version'] : '5.0.0';
+            } else {
+                $result = mysql_query("SELECT VERSION() as version", $this->conn);
+                if ($result) {
+                    $row = mysql_fetch_assoc($result);
+                    return $row ? $row['version'] : '5.0.0';
+                }
+            }
+        } catch (Exception $e) {
+            return '5.0.0'; // fallback ke versi paling aman
+        }
+        return '5.0.0';
+    }
+
     public function escapeString($value)
     {
         if ($this->usePDO) {
